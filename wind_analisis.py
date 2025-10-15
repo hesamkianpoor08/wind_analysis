@@ -19,6 +19,38 @@ st.markdown("""
     .stRadio div[role="radiogroup"] > label, .stRadio div[role="radiogroup"] > div > label, .stRadio div[role="radiogroup"] p { color: #E0E0E0 !important; }
     .stFileUploader { background-color: #1e1e1e; border-radius: 8px; padding: 8px; }
     div[data-testid="stCheckbox"] label p { color: #E0E0E0 !important; font-weight: bold !important; }
+            /* ---------- Make input numbers/text visible on dark background ---------- */
+/* Number / text inputs, textareas and selects */
+div[data-testid="stNumberInput"] input,
+div[data-testid="stTextInput"] input,
+div[data-testid="stTextArea"] textarea,
+div[data-testid="stSelectbox"] div[role="button"],
+div[data-testid="stMultiSelect"] div[role="listbox"] input,
+input[type="number"],
+input[type="text"],
+textarea,
+select {
+    color: #E0E0E0 !important;           /* text color (light) */
+    background-color: #1e1e1e !important;/* input background (dark) */
+    border-color: rgba(255,255,255,0.08) !important;
+}
+
+/* Metric values (big numbers) and deltas */
+.stMetricValue, .stMetricDelta, div[data-testid="metric-container"] {
+    color: #E0E0E0 !important;
+}
+
+/* Small extra: ensure placeholder text also visible */
+input::placeholder, textarea::placeholder {
+    color: rgba(224,224,224,0.6) !important;
+}
+
+/* Ensure dropdown options text is visible */
+div[role="option"] {
+    color: #E0E0E0 !important;
+    background-color: #1e1e1e !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
