@@ -70,18 +70,19 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# --- Wind Load Calculation Function ---
-def calculate_wind_load(H, v_b0, Ax, Ay, z0=0.01, rho_air=1.225, c_dir=1, c_season=1, c0=1, cp=1.2):
+# --- Wind Load Calculation Function (BS EN 1991.1.4) ---
+def calculate_wind_load(H, omega, g, rho_air, Ax=303.3, Ay=592.5, z0=0.01, c_dir=1, c_season=1, c0=1, cp=1.2):
     """
     Calculate wind load according to BS EN 1991.1.4
     
     Parameters:
     H: Total height [m]
-    v_b0: Basic wind velocity [m/s]
+    omega: Angular velocity [rad/s]
+    g: Gravity [m/s²]
+    rho_air: Air density [kg/m³]
     Ax: Cross-sectional area in x-direction [m²]
     Ay: Cross-sectional area in y-direction [m²]
     z0: Roughness length [m]
-    rho_air: Air density [kg/m³]
     c_dir: Directional factor
     c_season: Season factor
     c0: Orography factor
@@ -93,7 +94,11 @@ def calculate_wind_load(H, v_b0, Ax, Ay, z0=0.01, rho_air=1.225, c_dir=1, c_seas
     # Height array
     z = np.arange(1, H + 1)
     
-    # Basic wind velocity
+    # Basic wind velocity (convert from your input if needed)
+    # Using default v_b0 = 100/3.6 m/s (from original MATLAB)
+    v_b0 = 100 / 3.6
+    
+    # Basic wind velocity with factors
     vb = c_dir * c_season * v_b0
     
     # Terrain factor
@@ -124,7 +129,9 @@ def calculate_wind_load(H, v_b0, Ax, Ay, z0=0.01, rho_air=1.225, c_dir=1, c_seas
         'Fwy': Fwy,
         'Fwx': Fwx,
         'q_p': q_p,
-        'Iv': Iv
+        'Iv': Iv,
+        'omega': omega,
+        'g': g
     }
 
 
@@ -160,34 +167,33 @@ if mode == "Manual Input":
     col1, col2 = st.columns(2)
     
     with col1:
-        st.write("**Structure Parameters**")
+        st.write("**Primary Parameters**")
         H = st.number_input("Total Height (H) [m]", value=66.7, min_value=1.0, step=1.0)
-        Ax = st.number_input("Cross-sectional Area X (Ax) [m²]", value=303.3, min_value=0.1, step=10.0)
-        Ay = st.number_input("Cross-sectional Area Y (Ay) [m²]", value=592.5, min_value=0.1, step=10.0)
+        omega_rpm = st.number_input("Angular Velocity (ω) [RPM]", value=1.0, min_value=0.0, step=0.1)
+        omega = omega_rpm * 2 * np.pi / 60  # Convert RPM to rad/s
+        st.info(f"ω = {omega:.4f} rad/s")
     
     with col2:
-        st.write("**Wind Parameters**")
-        v_b0_kmh = st.number_input("Basic Wind Velocity (v_b0) [km/h]", value=100.0, min_value=1.0, step=5.0)
-        v_b0 = v_b0_kmh / 3.6  # Convert to m/s
-        st.info(f"Wind velocity: {v_b0:.2f} m/s")
-        
-        z0 = st.number_input("Roughness Length (z0) [m]", value=0.01, min_value=0.001, max_value=1.0, step=0.01, format="%.3f")
-        cp = st.number_input("Pressure Coefficient (cp)", value=1.2, min_value=0.1, max_value=3.0, step=0.1)
+        st.write("**Environmental Parameters**")
+        g = st.number_input("Gravity (g) [m/s²]", value=9.81, min_value=0.1, step=0.01)
+        rho_air = st.number_input("Air Density (ρ) [kg/m³]", value=1.225, min_value=0.1, step=0.001, format="%.3f")
     
     if st.button("Calculate Wind Load"):
         with st.spinner("Calculating..."):
-            results = calculate_wind_load(int(H), v_b0, Ax, Ay, z0=z0, cp=cp)
+            results = calculate_wind_load(int(H), omega, g, rho_air)
             
             st.success("✅ Calculation Complete!")
             
             # Display key results
-            col1, col2, col3 = st.columns(3)
+            col1, col2, col3, col4 = st.columns(4)
             with col1:
-                st.metric("Max Wind Velocity", f"{results['vm_max']:.2f} m/s")
+                st.metric("Max Velocity", f"{results['vm_max']:.2f} m/s")
             with col2:
-                st.metric("Max Wind Load (X)", f"{results['Fwx'][-1]:.2f} kN")
+                st.metric("Max Load (X)", f"{results['Fwx'][-1]:.2f} kN")
             with col3:
-                st.metric("Max Wind Load (Y)", f"{results['Fwy'][-1]:.2f} kN")
+                st.metric("Max Load (Y)", f"{results['Fwy'][-1]:.2f} kN")
+            with col4:
+                st.metric("ω (rad/s)", f"{omega:.4f}")
             
             # Plot results
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
@@ -245,18 +251,15 @@ else:
     col1, col2 = st.columns(2)
     
     with col1:
-        st.write("**Structure Parameters**")
-        Ax = st.number_input("Cross-sectional Area X (Ax) [m²]", value=303.3, min_value=0.1, step=10.0, key="ax_upload")
-        Ay = st.number_input("Cross-sectional Area Y (Ay) [m²]", value=592.5, min_value=0.1, step=10.0, key="ay_upload")
+        st.write("**Primary Parameters**")
+        omega_rpm = st.number_input("Angular Velocity (ω) [RPM]", value=1.0, min_value=0.0, step=0.1, key="omega_upload")
+        omega = omega_rpm * 2 * np.pi / 60
+        st.info(f"ω = {omega:.4f} rad/s")
     
     with col2:
-        st.write("**Wind Parameters**")
-        v_b0_kmh = st.number_input("Basic Wind Velocity (v_b0) [km/h]", value=100.0, min_value=1.0, step=5.0, key="vb0_upload")
-        v_b0 = v_b0_kmh / 3.6
-        st.info(f"Wind velocity: {v_b0:.2f} m/s")
-        
-        z0 = st.number_input("Roughness Length (z0) [m]", value=0.01, min_value=0.001, max_value=1.0, step=0.01, format="%.3f", key="z0_upload")
-        cp = st.number_input("Pressure Coefficient (cp)", value=1.2, min_value=0.1, max_value=3.0, step=0.1, key="cp_upload")
+        st.write("**Environmental Parameters**")
+        g = st.number_input("Gravity (g) [m/s²]", value=9.81, min_value=0.1, step=0.01, key="g_upload")
+        rho_air = st.number_input("Air Density (ρ) [kg/m³]", value=1.225, min_value=0.1, step=0.001, format="%.3f", key="rho_upload")
     
     uploaded_file = st.file_uploader("Upload Height Data (CSV/TXT)", type=["csv", "txt"])
     
@@ -277,7 +280,7 @@ else:
             if st.button("Calculate Wind Load from Dataset"):
                 with st.spinner("Calculating wind loads..."):
                     H_max = int(np.ceil(heights.max()))
-                    results = calculate_wind_load(H_max, v_b0, Ax, Ay, z0=z0, cp=cp)
+                    results = calculate_wind_load(H_max, omega, g, rho_air)
                     
                     # Interpolate results for uploaded heights
                     Fwx_interp = np.interp(heights, results['z'], results['Fwx'])
@@ -287,13 +290,15 @@ else:
                     st.success("✅ Calculation Complete!")
                     
                     # Display statistics
-                    col1, col2, col3 = st.columns(3)
+                    col1, col2, col3, col4 = st.columns(4)
                     with col1:
-                        st.metric("Max Wind Velocity", f"{vm_interp.max():.2f} m/s")
+                        st.metric("Max Velocity", f"{vm_interp.max():.2f} m/s")
                     with col2:
-                        st.metric("Max Wind Load (X)", f"{Fwx_interp.max():.2f} kN")
+                        st.metric("Max Load (X)", f"{Fwx_interp.max():.2f} kN")
                     with col3:
-                        st.metric("Max Wind Load (Y)", f"{Fwy_interp.max():.2f} kN")
+                        st.metric("Max Load (Y)", f"{Fwy_interp.max():.2f} kN")
+                    with col4:
+                        st.metric("ω (rad/s)", f"{omega:.4f}")
                     
                     # Plot results
                     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
@@ -339,17 +344,16 @@ else:
                         st.dataframe(df_output)
 
 # --- Information Section ---
-with st.expander("ℹ️ About BS EN 1991.1.4"):
+with st.expander("ℹ️ About Input Parameters"):
     st.write("""
-    **BS EN 1991.1.4** (Eurocode 1: Actions on structures - Part 1-4: General actions - Wind actions) 
-    provides methods for calculating wind loads on buildings and structures.
+    **Input Parameters:**
+    - **H**: Total height of the structure [m]
+    - **ω (omega)**: Angular velocity in RPM (converted to rad/s)
+    - **g**: Gravitational acceleration [m/s²] (standard: 9.81)
+    - **ρ (rho_air)**: Air density [kg/m³] (standard at sea level: 1.225)
     
-    **Key Parameters:**
-    - **v_b0**: Basic wind velocity (characteristic 10 min mean wind velocity at 10m height)
-    - **z0**: Roughness length (depends on terrain category)
-    - **Ax, Ay**: Reference areas for wind load calculation
-    - **cp**: Pressure coefficient (depends on structure shape and wind direction)
-    - **H**: Total height of the structure
+    **About BS EN 1991.1.4:**
+    This standard provides methods for calculating wind loads on buildings and structures.
     
     **Terrain Categories (typical z0 values):**
     - Open sea, lakes: z0 = 0.003 m
