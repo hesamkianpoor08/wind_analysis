@@ -224,3 +224,20 @@ else:
 
                     plt.tight_layout()
                     st.pyplot(fig)
+with st.expander("ℹ️ About Input Parameters"):
+    st.write("""
+    **Input Parameters:**
+    - **H**: Total height of the structure [m]
+    - **ω (omega)**: Angular velocity in RPM (converted to rad/s)
+    - **g**: Gravitational acceleration [m/s²] (standard: 9.81)
+    - **ρ (rho_air)**: Air density [kg/m³] (standard at sea level: 1.225)
+    
+    **About BS EN 1991.1.4:**
+    This standard provides methods for calculating wind loads on buildings and structures.
+    
+    **Terrain Categories (typical z0 values):**
+    - Open sea, lakes: z0 = 0.003 m
+    - Flat terrain with obstacles: z0 = 0.01 m
+    - Suburban/industrial: z0 = 0.3 m
+    - Urban areas: z0 = 1.0 m
+    """)
