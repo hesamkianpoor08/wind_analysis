@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-from pathlib import Path
 
 # Page config
 st.set_page_config(page_title="Wind Load Calculator (BS EN 1991.1.4)", layout="wide", page_icon="🌬️")
@@ -10,20 +9,27 @@ st.set_page_config(page_title="Wind Load Calculator (BS EN 1991.1.4)", layout="w
 # --- Light CSS Styling (white background, black text) ---
 st.markdown("""
 <style>
+    /* App background and text */
     .stApp {
         background-color: #ffffff;
         color: #000000;
     }
+
+    /* Header */
     h1 {
         color: #0B57A4 !important;
         font-size: 40px !important;
         text-align: center;
         font-weight: bold;
     }
-    .stSelectbox label, .stNumberInput label, .stMarkdown p, .stFileUploader label, .stRadio label {
+
+    /* Form labels and text */
+    label, .stSelectbox label, .stNumberInput label, .stMarkdown p, .stFileUploader label, .stRadio label {
         color: #000000 !important;
         font-weight: bold;
     }
+
+    /* Buttons */
     div.stButton > button:first-child {
         background-color: #0B57A4;
         color: white;
@@ -37,16 +43,25 @@ st.markdown("""
         background-color: #083e6a;
         color: white;
     }
+
+    /* File uploader */
     .stFileUploader {
         background-color: #f7f7f7;
         border-radius: 8px;
         padding: 8px;
     }
-    /* Make plotly charts scrollable when their container is constrained */
+
+    /* Make Plotly charts contained and scrollable when tall */
     .chart-container {
-        height: 520px;
+        height: 520px; /* fixed height so user can scroll inside */
         overflow: auto;
+        padding: 4px;
+        border-radius: 6px;
+        background-color: #ffffff;
     }
+
+    /* Ensure metric text is readable */
+    .stMetric { color: #000000; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -87,17 +102,16 @@ def read_parameter_file(uploaded_file):
 # --- App UI ---
 st.title("Wind Load Calculator (BS EN 1991.1.4) 🌬️")
 
-mode = st.radio("Select Input Mode", ["Manual Input", "Upload Parameters File"]) 
+# Default the radio to "Manual Input" (index=0) so the app opens in manual mode.
+mode = st.radio("Select Input Mode", ["Manual Input", "Upload Parameters File"], index=0)
 
-# Helper: build interactive Plotly charts
+# Helper: build interactive Plotly charts (ensure template 'plotly_white' for bright theme)
 def build_plots(results):
-    # Convert arrays to lists for Plotly
     z = results['z'].tolist()
     Fwy = results['Fwy'].tolist()
     Fwx = results['Fwx'].tolist()
     vm = results['vm'].tolist()
 
-    # Figure 1: Wind Loads (two traces)
     fig1 = go.Figure()
     fig1.add_trace(go.Scatter(x=Fwy, y=z, mode='lines+markers', name='Y-direction', hovertemplate='Load: %{x:.3f} kN<br>Height: %{y} m'))
     fig1.add_trace(go.Scatter(x=Fwx, y=z, mode='lines+markers', name='X-direction', hovertemplate='Load: %{x:.3f} kN<br>Height: %{y} m'))
@@ -111,10 +125,10 @@ def build_plots(results):
         font_color='black',
         hovermode='closest',
         dragmode='pan',
+        margin=dict(l=40,r=20,t=60,b=40)
     )
     fig1.update_yaxes(autorange=True)
 
-    # Figure 2: Wind Velocity Profile
     fig2 = go.Figure()
     fig2.add_trace(go.Scatter(x=vm, y=z, mode='lines+markers', name='Mean Wind Velocity', hovertemplate='Velocity: %{x:.3f} m/s<br>Height: %{y} m'))
     fig2.update_layout(
@@ -127,6 +141,7 @@ def build_plots(results):
         font_color='black',
         hovermode='closest',
         dragmode='pan',
+        margin=dict(l=40,r=20,t=60,b=40)
     )
     fig2.update_yaxes(autorange=True)
 
@@ -151,22 +166,22 @@ if mode == "Manual Input":
             results = calculate_wind_load(int(H), omega, g, rho_air)
             st.success("✅ Calculation Complete!")
 
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Max Velocity", f"{results['vm_max']:.2f} m/s")
-            col2.metric("Max Load (X)", f"{results['Fwx'][-1]:.2f} kN")
-            col3.metric("Max Load (Y)", f"{results['Fwy'][-1]:.2f} kN")
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Max Velocity", f"{results['vm_max']:.2f} m/s")
+            m2.metric("Max Load (X)", f"{results['Fwx'][-1]:.2f} kN")
+            m3.metric("Max Load (Y)", f"{results['Fwy'][-1]:.2f} kN")
 
             fig1, fig2 = build_plots(results)
 
-            # Display plots side-by-side in a scrollable container
+            # Display plots side-by-side in scrollable containers so the charts remain interactive
             c1, c2 = st.columns(2)
             with c1:
                 st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-                st.plotly_chart(fig1, use_container_width=True, config={"scrollZoom": True})
+                st.plotly_chart(fig1, use_container_width=True, config={"scrollZoom": True, "responsive": True})
                 st.markdown('</div>', unsafe_allow_html=True)
             with c2:
                 st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-                st.plotly_chart(fig2, use_container_width=True, config={"scrollZoom": True})
+                st.plotly_chart(fig2, use_container_width=True, config={"scrollZoom": True, "responsive": True})
                 st.markdown('</div>', unsafe_allow_html=True)
 
 # --- Upload Parameters File ---
@@ -187,21 +202,21 @@ else:
                     results = calculate_wind_load(int(H), omega, g, rho_air)
                     st.success("✅ Calculation Complete!")
 
-                    col1, col2, col3 = st.columns(3)
-                    col1.metric("Max Velocity", f"{results['vm_max']:.2f} m/s")
-                    col2.metric("Max Load (X)", f"{results['Fwx'][-1]:.2f} kN")
-                    col3.metric("Max Load (Y)", f"{results['Fwy'][-1]:.2f} kN")
+                    m1, m2, m3 = st.columns(3)
+                    m1.metric("Max Velocity", f"{results['vm_max']:.2f} m/s")
+                    m2.metric("Max Load (X)", f"{results['Fwx'][-1]:.2f} kN")
+                    m3.metric("Max Load (Y)", f"{results['Fwy'][-1]:.2f} kN")
 
                     fig1, fig2 = build_plots(results)
 
                     c1, c2 = st.columns(2)
                     with c1:
                         st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-                        st.plotly_chart(fig1, use_container_width=True, config={"scrollZoom": True})
+                        st.plotly_chart(fig1, use_container_width=True, config={"scrollZoom": True, "responsive": True})
                         st.markdown('</div>', unsafe_allow_html=True)
                     with c2:
                         st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-                        st.plotly_chart(fig2, use_container_width=True, config={"scrollZoom": True})
+                        st.plotly_chart(fig2, use_container_width=True, config={"scrollZoom": True, "responsive": True})
                         st.markdown('</div>', unsafe_allow_html=True)
 
 with st.expander("ℹ️ About Input Parameters"):
@@ -211,13 +226,14 @@ with st.expander("ℹ️ About Input Parameters"):
     - **ω (omega)**: Angular velocity in RPM (converted to rad/s)
     - **g**: Gravitational acceleration [m/s²] (standard: 9.81)
     - **ρ (rho_air)**: Air density [kg/m³] (standard at sea level: 1.225)
-    
+
     **About BS EN 1991.1.4:**
     This standard provides methods for calculating wind loads on buildings and structures.
-    
+
     **Terrain Categories (typical z0 values):**
     - Open sea, lakes: z0 = 0.003 m
     - Flat terrain with obstacles: z0 = 0.01 m
     - Suburban/industrial: z0 = 0.3 m
     - Urban areas: z0 = 1.0 m
     """)
+
